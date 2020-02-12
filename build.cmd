@@ -1,1 +1,1 @@
-%msbuild% /t:rebuild /p:ForceImportBeforeCppTargets=nosecure.props;Configuration=Debug;Platform=Win32;PlatformToolset=v142 /m %*
+%msbuild% /t:rebuild /p:ForceImportBeforeCppTargets=%GITHUB_WORKSPACE%\tools\nosecure.props;Configuration=Debug;Platform=Win32;PlatformToolset=v142 /m %*
