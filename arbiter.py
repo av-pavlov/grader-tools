@@ -2,7 +2,7 @@
 
 """ Проверка задачи на тестах из папки, запись результатов в файл """
 
-import os, shutil, sys, time, logging, glob, re
+import os, shutil, sys, time, logging, glob, re, datetime
 from argparse import ArgumentParser
 from collections import OrderedDict
 
@@ -109,7 +109,7 @@ def cleanup(task):
     global cfg
     cleanup_list = glob.glob(os.path.join(cfg['testdir'], '*.o'))
     while cleanup_list:
-        filename = cleanup_list.pop():
+        filename = cleanup_list.pop()
         try:
             os.remove(filename)
         except FileNotFoundError:
@@ -155,7 +155,7 @@ def check_solution():
     """ Проверка решения """
     global cfg
     answer = {
-        "datetime": datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
+        "datetime": datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
         "language": "VisualCppLang",
         "compilation": "FL",
         "results": OrderedDict()
@@ -193,7 +193,7 @@ def check_solution():
 if __name__ == '__main__':
     logsetup()
     cfg = argparse()
-    check_dirs(cfg)
-    check_solution_exists(cfg)
+    check_dirs()
+    check_solution_exists()
     logging.info("Arbiter started.")
     check_solution()
