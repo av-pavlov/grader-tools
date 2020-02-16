@@ -6,6 +6,8 @@ import os, shutil, sys, time, logging, glob
 from argparse import ArgumentParser
 from collections import OrderedDict
 
+DEFAULT_MASK = 'Debug/*.exe'
+
 def logsetup():
     """ Настройка логирования"""
     try:
@@ -22,13 +24,17 @@ def argparse():
     """ Установка параметров командной строки """
     try:
         parser = ArgumentParser(description='Арбитр для проверки задач по программированию')
-        parser.add_argument('-w', '--workdir', default='.', type=str, help="рабочий каталог")
-        parser.add_argument('-t', '--testdir', default='test', type=str, help="каталог с тестами")
-        parser.add_argument('-r', '--resultsdir', default='.', type=str, help="каталог для записи результатов")
-        parser.add_argument('-s', '--solution', default='Debug/*.exe', type=str, help="исполняемый файл для тестирования")
+        parser.add_argument('-w', '--workdir', default='.', 
+                            type=str, help='рабочий каталог, по умолчанию текущий каталог')
+        parser.add_argument('-t', '--testdir', default='test', 
+                            type=str, help='каталог с тестами, по умолчанию test в рабочем каталоге')
+        parser.add_argument('-r', '--resultsdir', default='.', 
+                            type=str, help='каталог для записи результатов, по умолчанию рабочий')
+        parser.add_argument('-s', '--solution', default=DEFAULT_MASK, 
+                            type=str, help='исполняемый файл для тестирования, по умолчанию ищет в Debug в рабочем каталоге')
         return vars(parser.parse_args())
     except Exception as error:
-        logging.error(f"Не удалось прочесть аргументы командной строки: {error.args[0]}")
+        logging.error(f'Не удалось прочесть аргументы командной строки: {error.args[0]}')
         sys.exit(129)
 
 def check_writable(directory):
@@ -40,7 +46,6 @@ def check_writable(directory):
     except OSError as error:
         logging.error(f'Не удалась попытка записи в {directory}-каталог "{cfg[directory]}"!!!')
         sys.exit(2)
-
 
 def check_dirs(cfg):
     base_dir = os.getcwd()
@@ -58,6 +63,22 @@ def check_dirs(cfg):
 
     check_writable('workdir')
     check_writable('resultsdir')
+
+def check_solution(cfg):
+    fn = None
+    msg = 'Solution file not found!'
+    if cfg['solution'] == DEFAULT_MASK:
+        fn = glob.glob(os.path.join(cfg['workdir'], DEFAULT_MASK))
+        if len(fn) == 1:
+            fn = fn[0]
+        else:
+            msg = 'Если файл решения не указан явно, он должен быть единственным файлом в каталоге Debug!'
+            fn = None
+    else:
+        fn = os.path.join(cfg['workdir'], cfg['solution'])
+    if not (fn and os.path.isfile(fn)):
+        logging.error(msg)
+        sys.exit(2)
 
 
 def cleanup(task):
@@ -77,7 +98,7 @@ def cleanup(task):
 def check_test(self, task, language, solution, test):
     pass
 
-def check_solution(self, task, language, solution):
+def check_solution2(self, task, language, solution):
     """ Проверка решений """
     answer = {
         "datetime": datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
@@ -199,5 +220,6 @@ if __name__ == '__main__':
     logsetup()
     cfg = argparse()
     check_dirs(cfg)
+    check_solution(cfg)
     logging.info("Arbiter started.")
 
