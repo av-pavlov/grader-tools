@@ -9,7 +9,15 @@ from collections import OrderedDict
 from multimeter._tasks import Task
 from ctypes import CDLL, c_char_p, c_uint, byref
 
-DEFAULT_MASK = 'Debug/*.exe'
+DEFAULT_SOLUTION_MASK = 'Debug/*.exe'
+
+cfg = {}
+invoker = None
+
+
+class ArbiterError(Exception):
+    pass
+
 
 def logsetup():
     """ Настройка логирования"""
@@ -21,7 +29,7 @@ def logsetup():
                             handlers=(log_cout,))
     except Exception as error:
         print("ERROR setting up loggers:", error.args[0])
-        sys.exit(129)
+        raise ArbiterError('FL')
 
 def argparse():
     """ Установка параметров командной строки """
@@ -33,12 +41,12 @@ def argparse():
                             type=str, help='каталог с тестами, по умолчанию test в рабочем каталоге')
         parser.add_argument('-r', '--resultsdir', default='.', 
                             type=str, help='каталог для записи результатов, по умолчанию рабочий')
-        parser.add_argument('-s', '--solution', default=DEFAULT_MASK, 
+        parser.add_argument('-s', '--solution', default=DEFAULT_SOLUTION_MASK, 
                             type=str, help='исполняемый файл для тестирования, по умолчанию ищет в Debug в рабочем каталоге')
         return vars(parser.parse_args())
     except Exception as error:
         logging.error(f'Не удалось прочесть аргументы командной строки: {error.args[0]}')
-        sys.exit(129)
+        raise ArbiterError('FL') from None
 
 def check_writable(directory):
     """ Проверка, что в каталог с конфиг-названием directory можно писать """
@@ -49,7 +57,7 @@ def check_writable(directory):
         os.remove(fn)
     except OSError as error:
         logging.error(f'Не удалась попытка записи в {directory}-каталог "{cfg[directory]}"!!!')
-        sys.exit(2)
+        raise ArbiterError('FL') from None
 
 def check_dirs():
     """ проверка наличия и доступности всех каталогов"""
@@ -59,12 +67,13 @@ def check_dirs():
         directory = cfg[_] = os.path.join(base_dir, cfg[_])
         if not os.path.isdir(directory):
             logging.error(f'Не удалось найти {_}-каталог "{directory}"!!!')
-            sys.exit(2)
+            raise ArbiterError('FL')
 
     try:
         os.chdir(cfg['workdir'])
     except OSError as error:
         logging.error(f'Не удалось войти в рабочий каталог: "{cfg["workdir"]}"!!!')
+        raise ArbiterError('FL') from None
 
     check_writable('workdir')
     check_writable('resultsdir')
@@ -74,18 +83,18 @@ def check_solution_exists():
     global cfg
     fn = None
     msg = 'Solution file not found!'
-    if cfg['solution'] == DEFAULT_MASK:
-        fn = glob.glob(os.path.join(cfg['workdir'], DEFAULT_MASK))
+    if cfg['solution'] == DEFAULT_SOLUTION_MASK:
+        fn = glob.glob(os.path.join(cfg['workdir'], DEFAULT_SOLUTION_MASK))
         if len(fn) == 1:
             fn = fn[0]
         else:
-            msg = 'Если файл решения не указан явно, он должен быть единственным файлом в каталоге Debug!'
+            msg = 'Если файл решения не указан явно, он должен быть единственным exe-файлом в каталоге Debug!'
             fn = None
     else:
         fn = os.path.join(cfg['workdir'], cfg['solution'])
     if not (fn and os.path.isfile(fn)):
         logging.error(msg)
-        sys.exit(2)
+        raise ArbiterError('FL')
     cfg['solution'] = fn
 
 def check_checker_exists():
@@ -93,9 +102,23 @@ def check_checker_exists():
     global cfg
     fn = os.path.join(cfg['testdir'], 'check.exe')
     if not os.path.isfile(fn):
-        logging.error(msg)
-        sys.exit(2)
+        logging.error('Чекер должен находиться в папке с тестами и называться check.exe')
+        raise ArbiterError('FL')
     cfg['checker'] = fn
+
+def check_invoker_exists():
+    """ Проверка наличия invoker.dll """
+    global cfg, invoker
+    dllpath = os.path.abspath(os.path.join(cfg['checktoolsdir'], 'invoker.dll'))
+    if not os.path.isfile(dllpath):
+        logging.error(f'Библиотека для запуска решений invoker.DLL ({dllpath}) не найдена!')
+        raise ArbiterError('FL')
+    try:
+        invoker = CDLL(dllpath)
+    except OSError:
+        logging.error(f'Библиотека для запуска решений invoker.DLL ({dllpath}) не может быть загружена!')
+        raise ArbiterError('FL') from None
+
 
 class PatchedTask(Task):
     @property
@@ -128,10 +151,9 @@ def execute(task):
         output_file = c_char_p(b'stdout')
         memory_limit = c_uint(0)
         time_limit = c_uint(int(1000 * task.timeout))
-        checktoolspath = os.path.split(__file__)[0]
-        dllpath = os.path.abspath(os.path.join(checktoolspath, 'invoker.dll'))
-        invoker = CDLL(dllpath)
+
         invoker.console(executable, input_file, output_file, byref(memory_limit), byref(time_limit))
+
         if memory_limit.value > task.memory_limit * 1024 * 1024:
             answer = 'ML'
         elif time_limit.value > task.time_limit * 1000:
@@ -164,17 +186,18 @@ def check_solution():
     code = re.sub('[^A-Za-z0-9_.]', '' , os.path.basename(cfg['workdir']))
     task = PatchedTask(code, cfg['workdir'])
 
-    logging.info("Переходим в рабочий каталог")
+    logging.info("Переходим в рабочий каталог " + cfg['workdir'])
     os.chdir(cfg['workdir'])
 
     # Проверка на тестах
     results = []
     testmask = os.path.join(cfg['testdir'], '??')
     tests = sorted([os.path.basename(fn) for fn in glob.glob(testmask)])
+    logging.info("Найдены тесты: "+' '.join(tests))
     suite_key = '.' # на будущее мб папки для позадач
     answer['results'][suite_key] = OrderedDict()
     for test in tests:
-        test_file = os.path.join(cfg.tests, suite_key, test)
+        test_file = os.path.join(cfg['testdir'], suite_key, test)
         shutil.copy(test_file, task.input_file)
         logging.info(f'Запуск на тесте {test}:')
         execution_verdict = execute(task)
@@ -193,7 +216,10 @@ def check_solution():
 if __name__ == '__main__':
     logsetup()
     cfg = argparse()
+    cfg['checktoolsdir'] = os.path.split(os.path.abspath(__loader__.path))[0]    
     check_dirs()
+    check_checker_exists()
     check_solution_exists()
+    check_invoker_exists()
     logging.info("Arbiter started.")
     check_solution()
