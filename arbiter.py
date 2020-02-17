@@ -10,7 +10,7 @@ from ctypes import CDLL, c_char_p, c_uint, byref
 
 from multimeter._tasks import Task
 
-LOG_FILENAME = 'arbiter.py'
+LOG_FILENAME = 'arbiter.log'
 DEFAULT_SOLUTION_MASK = 'Debug/*.exe'
 INPUT_FILENAME  = 'putin1.txt'
 OUTPUT_FILENAME = 'putout.txt'
@@ -56,6 +56,7 @@ class PatchedTask(Task):
 def logsetup():
     """ Настройка логирования"""
     try:
+        LOG_FILENAME = pathjoin(os.getcwd(), LOG_FILENAME)
         log_cout = logging.FileHandler(LOG_FILENAME, encoding='utf-8')
         logging.basicConfig(level=logging.DEBUG,
                             format='%(asctime)s: %(levelname)s: %(message)s',
