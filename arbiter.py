@@ -107,6 +107,15 @@ def check_dirs():
         logging.error(f'Не удалось войти в рабочий каталог: "{cfg["workdir"]}"!!!')
         raise ArbiterError('FL') from None
 
+    try:
+        os.chdir(cfg['testdir'])
+        if not glob.glob('./??'):
+            logging.error(f'Не удалось найти тесты в папке {cfg["testdir"]}, проверьте, что проект называется правильно')
+            raise ArbiterError('NT')
+    except OSError as error:
+        logging.error(f'Не удалось войти в каталог тестов: "{cfg["testdir"]}"!!!')
+        raise ArbiterError('FL') from None
+
     check_writable('workdir')
     check_writable('resultsdir')
     cfg['taskname'] = re.sub('[^A-Za-z0-9_.]', '' , basename(cfg['workdir']))
@@ -140,7 +149,6 @@ def check_checker_exists():
         logging.error('Чекер должен находиться в папке с тестами и называться check.exe')
         raise ArbiterError('FL')
     cfg['checker'] = fn
-
 
 def check_invoker_loads():
     """ Проверка наличия invoker.dll """
