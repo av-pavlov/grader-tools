@@ -10,6 +10,7 @@ from ctypes import CDLL, c_char_p, c_uint, byref
 
 from multimeter._tasks import Task
 
+LOG_FILENAME = 'arbiter.py'
 DEFAULT_SOLUTION_MASK = 'Debug/*.exe'
 INPUT_FILENAME  = 'putin1.txt'
 OUTPUT_FILENAME = 'putout.txt'
@@ -55,7 +56,7 @@ class PatchedTask(Task):
 def logsetup():
     """ Настройка логирования"""
     try:
-        log_cout = logging.StreamHandler()
+        log_cout = logging.FileHandler(LOG_FILENAME, encoding='utf-8')
         logging.basicConfig(level=logging.DEBUG,
                             format='%(asctime)s: %(levelname)s: %(message)s',
                             datefmt='%a %d/%m %H:%M:%S',
@@ -269,9 +270,10 @@ if __name__ == '__main__':
         result = check_solution() 
     except ArbiterError as e:
         result = e.args[0]
-    logging.info(f'=== Тестирование задачи {cfg["taskname"]} завершено: {result} ===')
     try:
+        logging.info(f'=== Тестирование задачи {cfg["taskname"]} завершено: {result} ===')
         open(pathjoin(cfg['resultsdir'], cfg['taskname']+'.res'), 'w').write(result)
+        print(open(LOG_FILENAME, encoding='utf-8').read())
         sys.exit(0 if result == 'OK' else -2)
     except Exception as e:
         print(e)
