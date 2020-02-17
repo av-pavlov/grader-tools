@@ -14,7 +14,7 @@ DEFAULT_SOLUTION_MASK = 'Debug/*.exe'
 INPUT_FILENAME  = 'putin1.txt'
 OUTPUT_FILENAME = 'putout.txt'
 ANSWER_FILENAME = 'putans.txt'
-TMPFILE_MASK =    'put???.txt'
+TMPFILE_MASK    = 'put???.txt'
 
 cfg = {}
 invoker = None
@@ -159,8 +159,9 @@ def check_invoker_loads():
         raise ArbiterError('FL')
     try:
         invoker = CDLL(dllpath)
-    except OSError:
+    except OSError as e:
         logging.error(f'Библиотека для запуска решений invoker.DLL ({dllpath}) не может быть загружена!')
+        logging.error(e)
         raise ArbiterError('FL') from None
 
 def cleanup(task):
@@ -271,5 +272,6 @@ if __name__ == '__main__':
     logging.info(f'=== Тестирование задачи {cfg["taskname"]} завершено: {result} ===')
     try:
         open(pathjoin(cfg['resultsdir'], cfg['taskname']+'.res'), 'w').write(result)
+        sys.exit(0 if result=='OK' else 1)
     except:
-        pass
+        sys.exit(-1)
