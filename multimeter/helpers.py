@@ -8,8 +8,6 @@ import logging
 from datetime import datetime
 from os.path import join
 
-from flask import url_for, request, session, redirect
-
 ISO_DATETIME = '%Y-%m-%dT%H:%M:%S'
 FAR_FUTURE = '2100-01-01T00:00:00'
 
@@ -121,23 +119,6 @@ def results_dir(settings):
 
 def queue_dir(app):
     return join(app.config['WORK'], '.queue')
-
-
-def admin_required(f):
-    """
-     Декоратор обязательной авторизации администратора
-    :param f: Функция, генерирующая страницу для авторизированных пользователей
-    """
-    from functools import wraps
-
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'admin' not in session:
-            next_path = request.path if request.path != url_for('admin.admin_login') else ''
-            return redirect(url_for('admin.admin_login', next=next_path))
-        return f(*args, **kwargs)
-
-    return decorated_function
 
 
 def get_value(container, key, required_class, default):

@@ -250,7 +250,6 @@ def check_solution():
             logging.info('Останавливаю тестирование.')
             raise ArbiterError(verdict)
         task.time_limit, task.timeout = 1.5, 3
-    logging.info('=== Тестирование завершено ===\nРезультаты:\n' + pprint.pformat(answer))
     return verdict
 
 if __name__ == '__main__':
