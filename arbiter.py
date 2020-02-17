@@ -272,6 +272,7 @@ if __name__ == '__main__':
     logging.info(f'=== Тестирование задачи {cfg["taskname"]} завершено: {result} ===')
     try:
         open(pathjoin(cfg['resultsdir'], cfg['taskname']+'.res'), 'w').write(result)
-        sys.exit(0 if result=='OK' else 1)
-    except:
+        sys.exit(0 if result == 'OK' else -2)
+    except Exception as e:
+        print(e)
         sys.exit(-1)
