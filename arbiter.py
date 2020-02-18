@@ -57,8 +57,7 @@ def logsetup():
     """ Настройка логирования"""
     global LOG_FILENAME
     try:
-        LOG_FILENAME = pathjoin(os.getcwd(), LOG_FILENAME)
-        log_cout = logging.FileHandler(LOG_FILENAME, encoding='utf-8')
+        log_cout = logging.FileHandler(pathjoin(os.getcwd(), LOG_FILENAME), encoding='utf-8')
         logging.basicConfig(level=logging.DEBUG,
                             format='%(asctime)s: %(levelname)s: %(message)s',
                             datefmt='%a %d/%m %H:%M:%S',
@@ -257,6 +256,7 @@ def check_solution():
     return verdict
 
 if __name__ == '__main__':
+    original_dir = os.getcwd()
     try:
         logsetup()
         cfg = argparse()
@@ -275,6 +275,8 @@ if __name__ == '__main__':
     try:
         logging.info(f'=== Тестирование задачи {cfg["taskname"]} завершено: {result} ===')
         open(pathjoin(cfg['resultsdir'], cfg['taskname']+'.res'), 'w').write(result)
+        os.chdir(original_dir)
+        subprocess.call("type " + LOG_FILENAME, shell=True)        
         sys.exit(0 if result == 'OK' else -2)
     except Exception as e:
         print(e)
