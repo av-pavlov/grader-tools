@@ -36,20 +36,22 @@ class PatchedTask(Task):
 
     def check(self):
         """ Проверка ответа участника """
-        answer = 'FL'
+        answer = ['FL', '']
         try:
-            subprocess.check_call([
+            output = subprocess.check_output([
                 self.checker,
                 self.input_file,
                 self.output_file,
                 ANSWER_FILENAME,
-            ])
-            answer = 'OK'
+            ], stderr=subprocess.STDOUT)
+            answer = ['OK', output]
         except subprocess.CalledProcessError as error:
             if error.returncode == 1:
-                answer = 'WA'  # Wrong answer
+                answer = ['WA', error.output]  # Wrong answer
             elif error.returncode == 2:
-                answer = 'PE'  # Presentation error
+                answer = ['WA', error.output]  # Presentation error
+        except:
+            answer = ['FL', '']
         return answer
 
 
@@ -57,7 +59,7 @@ def logsetup():
     """ Настройка логирования"""
     global LOG_FILENAME
     try:
-        log_cout = logging.FileHandler(pathjoin(os.getcwd(), LOG_FILENAME), encoding='utf-8')
+        log_cout = logging.FileHandler(pathjoin(os.getcwd(), LOG_FILENAME), mode='w', encoding='utf-8')
         logging.basicConfig(level=logging.DEBUG,
                             format='%(asctime)s: %(levelname)s: %(message)s',
                             datefmt='%a %d/%m %H:%M:%S',
@@ -148,7 +150,7 @@ def check_checker_exists():
     global cfg
     fn = os.path.join(cfg['testdir'], 'check.exe')
     if not os.path.isfile(fn):
-        logging.error('Чекер должен находиться в папке с тестами и называться check.exe')
+        logging.error(f'Чекер ({fn}) должен находиться в папке с тестами и называться check.exe')
         raise ArbiterError('FL')
     cfg['checker'] = fn
 
@@ -180,7 +182,7 @@ def cleanup(task):
             logging.error('Не могу удалить временные файл(ы) теста: ' + filename)
             raise ArbiterError('FL') from None
 
-def execute(task):
+def execute_solution(task):
     global cfg
     answer = 'FL'
 
@@ -210,7 +212,7 @@ def execute(task):
         answer = 'TL'  # Time Limit Exceeded
     return answer
 
-def check_solution():
+def run_tests():
     """ Проверка решения """
     global cfg
     answer = {
@@ -240,15 +242,21 @@ def check_solution():
     for test in tests:
         test_file = pathjoin(cfg['testdir'], suite_key, test)
         shutil.copy(test_file, task.input_file)
-        execution_verdict = execute(task)
+        execution_verdict = execute_solution(task)
         if execution_verdict != 'OK':
             verdict = execution_verdict
         else:
             shutil.copy(test_file + '.a', ANSWER_FILENAME)
-            verdict = task.check()
+            verdict, output = task.check()
         answer['results'][suite_key][test] = verdict
         cleanup(task)
         logging.info(f'Тест {test}: {verdict}')
+        if output:
+            try:
+                logging.info(output.decode('cp1251'))
+            except:
+                logging.info(output)
+
         if verdict != 'OK':
             logging.info('Останавливаю тестирование.')
             raise ArbiterError(verdict)
@@ -256,6 +264,7 @@ def check_solution():
     return verdict
 
 if __name__ == '__main__':
+    import ipdb; ipdb.set_trace()
     original_dir = os.getcwd()
     try:
         logsetup()
@@ -269,7 +278,7 @@ if __name__ == '__main__':
         check_invoker_loads()
         
         logging.info(f'=== Тестирование задачи {cfg["taskname"]} начато ===')
-        result = check_solution() 
+        result = run_tests() 
     except ArbiterError as e:
         result = e.args[0]
     try:
