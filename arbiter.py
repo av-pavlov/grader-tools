@@ -264,7 +264,6 @@ def run_tests():
     return verdict
 
 if __name__ == '__main__':
-    import ipdb; ipdb.set_trace()
     original_dir = os.getcwd()
     try:
         logsetup()
