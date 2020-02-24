@@ -58,7 +58,7 @@ class PatchedTask(Task):
 
 def logsetup():
     """ Настройка логирования"""
-    globel LOG_FILENAME
+    global LOG_FILENAME
     try:
         log_cout = logging.FileHandler(pathjoin(os.getcwd(), LOG_FILENAME), mode='w', encoding='utf-8')
         logging.basicConfig(level=logging.DEBUG,
