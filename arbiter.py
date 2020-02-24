@@ -10,7 +10,6 @@ from ctypes import CDLL, c_char_p, c_uint, byref
 
 from multimeter._tasks import Task
 
-LOG_FILENAME = 'arbiter.log'
 DEFAULT_SOLUTION_MASK = 'Debug/*.exe'
 INPUT_FILENAME  = 'putin1.txt'
 OUTPUT_FILENAME = 'putout.txt'
@@ -28,6 +27,7 @@ class ArbiterError(Exception):
 class PatchedTask(Task):
     input_file = INPUT_FILENAME
     output_file = OUTPUT_FILENAME
+    time_limit = 3.5                 # FOR GITHUB ACTIONS
 
     @property
     def checker(self):
@@ -57,13 +57,9 @@ class PatchedTask(Task):
 
 def logsetup():
     """ Настройка логирования"""
-    global LOG_FILENAME
     try:
-        log_cout = logging.FileHandler(pathjoin(os.getcwd(), LOG_FILENAME), mode='w', encoding='utf-8')
         logging.basicConfig(level=logging.DEBUG,
-                            format='%(asctime)s: %(levelname)s: %(message)s',
-                            datefmt='%a %d/%m %H:%M:%S',
-                            handlers=(log_cout,))
+                            format='[%(asctime)s] %(levelname)s: %(message)s')
     except Exception as error:
         print("ERROR setting up loggers:", error.args[0])
         raise ArbiterError('FL')
@@ -146,7 +142,7 @@ def check_solution_exists():
     cfg['solution'] = solution
 
 def check_checker_exists():
-    """ Проверка наличия файла решений """
+    """ Проверка наличия файла проверяющей программы """
     global cfg
     fn = os.path.join(cfg['testdir'], 'check.exe')
     if not os.path.isfile(fn):
@@ -182,14 +178,15 @@ def cleanup(task):
             logging.error('Не могу удалить временные файл(ы) теста: ' + filename)
             raise ArbiterError('FL') from None
 
-def execute_solution(task):
+def execute_one_test(task):
+    """ Запуск решения на одном тесте """
     global cfg
     answer = 'FL'
 
     files = [c_char_p(fn.encode('utf-8')) 
              for fn in (cfg['solution'], task.input_file, task.output_file)]
     memory_limit = c_uint(0)
-    time_limit = c_uint(int(1000 * task.timeout))
+    time_limit = c_uint(int(1000 * task.time_limit))
         
     try:
         invoker.console(*files, byref(memory_limit), byref(time_limit))
@@ -242,20 +239,23 @@ def run_tests():
     for test in tests:
         test_file = pathjoin(cfg['testdir'], suite_key, test)
         shutil.copy(test_file, task.input_file)
-        execution_verdict = execute_solution(task)
+        execution_verdict = execute_one_test(task)
+        logging.info(f'Запускаю тест {test}:') 
         if execution_verdict != 'OK':
-            verdict = execution_verdict
+            logging.info(f'  Программа завершилась некорректно') 
+            verdict, output = execution_verdict, None
         else:
+            logging.info(f'  Программа отработала, запускаю проверку результатов:') 
             shutil.copy(test_file + '.a', ANSWER_FILENAME)
             verdict, output = task.check()
         answer['results'][suite_key][test] = verdict
         cleanup(task)
-        logging.info(f'Тест {test}: {verdict}')
+        logging.info(f'  Вердикт: {verdict}')
         if output:
             try:
-                logging.info(output.decode('cp1251'))
+                logging.info('  Вывод проверки: ' + output.decode('cp1251'))
             except:
-                logging.info(output)
+                logging.info('  Вывод проверки: ' + output)
 
         if verdict != 'OK':
             logging.info('Останавливаю тестирование.')
