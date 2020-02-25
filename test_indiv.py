@@ -6,8 +6,8 @@ def build_badges():
 report = ""
 for line in open("README.md", encoding="utf-8"):
 	if MARKER in line:
-		report += MARKER + ' ' + build_badges()
-	else
+		report += f'{MARKER} {build_badges()}\n'
+	else:
 		report += line
 
 open("README.md", "w", encoding="utf-8").write(report)
