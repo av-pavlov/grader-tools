@@ -2,7 +2,7 @@
 
 """ Проверка задачи на тестах из папки, запись результатов в файл """
 
-import os, shutil, sys, time, logging, glob, re, datetime, subprocess
+import os, shutil, sys, time, logging, glob, re, datetime, subprocess, traceback
 from os.path import abspath, basename, split as pathsplit, join as pathjoin, isfile, isdir
 from argparse import ArgumentParser
 from collections import OrderedDict
@@ -51,7 +51,9 @@ class PatchedTask(Task):
                 answer = ['WA', error.output]  # Wrong answer
             elif error.returncode == 2:
                 answer = ['WA', error.output]  # Presentation error
-        except:
+        except Exception as e:
+            logging.error(e)
+            logging.error(traceback.format_exc())
             answer = ['FL', '']
         return answer
 
