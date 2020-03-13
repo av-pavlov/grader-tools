@@ -291,7 +291,7 @@ if __name__ == '__main__':
                 trace=1,
                 count=0)
             result = None
-            tracer.run('result = run_tests()', trace=1, count=0)
+            tracer.run('result = run_tests()')
         else:
             result = run_tests()
     except ArbiterError as e:
