@@ -45,6 +45,7 @@ class PatchedTask(Task):
                 self.output_file,
                 ANSWER_FILENAME,
             ], stderr=subprocess.STDOUT)
+            print(output)
             answer = ['OK', output]
         except subprocess.CalledProcessError as error:
             if error.returncode == 1:
