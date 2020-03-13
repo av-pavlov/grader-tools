@@ -1,1 +1,1 @@
-%msbuild% /t:rebuild /p:ForceImportBeforeCppTargets=%GITHUB_WORKSPACE%\tools\nosecure.props;Configuration=Debug;Platform=Win32;PlatformToolset=%DefaultPlatformToolset% /m /nologo -clp:ErrorsOnly %*
+%msbuild% /t:rebuild /p:ForceImportBeforeCppTargets=%GITHUB_WORKSPACE%\tools\nosecure.props;Configuration=Debug;Platform=Win32;PlatformToolset=%DefaultPlatformToolset%;WindowsTargetPlatformVersion=10 /m /nologo -clp:ErrorsOnly %*
