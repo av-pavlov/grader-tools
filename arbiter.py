@@ -229,14 +229,14 @@ def run_tests():
     task = PatchedTask(cfg['taskname'], cfg['workdir'])
     task.input_file
 
-    logging.info('Переходим в рабочий каталог ' + cfg['workdir'])
+    logging.info('Entering work dir ' + cfg['workdir'])
     os.chdir(cfg['workdir'])
 
     # Проверка на тестах
     results = []
     testmask = pathjoin(cfg['testdir'], '??')
     tests = sorted([basename(fn) for fn in glob.glob(testmask)])
-    logging.info('Найдены тесты: ' + ' '.join(tests))
+    logging.info('Found tests ' + ' '.join(tests))
     
     suite_key = '.' # на будущее мб папки для позадач
     answer['results'][suite_key] = OrderedDict()
@@ -247,12 +247,12 @@ def run_tests():
         test_file = pathjoin(cfg['testdir'], suite_key, test)
         shutil.copy(test_file, task.input_file)
         execution_verdict = execute_one_test(task)
-        logging.info(f'Запускаю тест {test}:') 
+        logging.info(f'Running test: {test}:') 
         if execution_verdict != 'OK':
-            logging.info(f'  Программа завершилась некорректно') 
+            logging.info(f'  Program crashed.') 
             verdict, output = execution_verdict, None
         else:
-            logging.info(f'  Программа отработала, запускаю проверку результатов:') 
+            logging.info(f'  Program has completeed, checking file') 
             shutil.copy(test_file + '.a', ANSWER_FILENAME)
             verdict, output = task.check()
         answer['results'][suite_key][test] = verdict
