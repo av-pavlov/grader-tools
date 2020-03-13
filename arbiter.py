@@ -284,7 +284,16 @@ if __name__ == '__main__':
         check_invoker_loads()
         
         logging.info(f'=== Тестирование задачи {cfg["taskname"]} начато ===')
-        result = run_tests() 
+        if all([word in cfg['workdir'] for word in ('c05str-CrpShepard', 'task1')]):
+            import trace
+            tracer = trace.Trace(
+                ignoredirs=[sys.prefix, sys.exec_prefix],
+                trace=1,
+                count=0)
+            result = None
+            tracer.run('result = run_tests()', trace=1, count=0)
+        else:
+            result = run_tests()
     except ArbiterError as e:
         result = e.args[0]
     try:
