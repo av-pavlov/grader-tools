@@ -45,7 +45,6 @@ class PatchedTask(Task):
                 self.output_file,
                 ANSWER_FILENAME,
             ], stderr=subprocess.STDOUT)
-            print(output)
             answer = ['OK', output]
         except subprocess.CalledProcessError as error:
             if error.returncode == 1:
@@ -53,6 +52,7 @@ class PatchedTask(Task):
             elif error.returncode == 2:
                 answer = ['WA', error.output]  # Presentation error
         except Exception as e:
+            print("CHECKER ERROR", e)
             logging.error(e)
             logging.error(traceback.format_exc())
             answer = ['FL', '']
