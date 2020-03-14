@@ -51,8 +51,11 @@ class PatchedTask(Task):
                 answer = ['WA', error.output]  # Wrong answer
             elif error.returncode == 2:
                 answer = ['WA', error.output]  # Presentation error
+            else:
+                logging.error("CHECKER FAILED:")
+                logging.error(error.output)
+                logging.error(error)
         except Exception as e:
-            print("CHECKER ERROR", e)
             logging.error(e)
             logging.error(traceback.format_exc())
             answer = ['FL', '']
@@ -217,6 +220,7 @@ def execute_one_test(task):
     return answer
 
 def run_tests():
+    """ Проверка решения """
     global cfg
     answer = {
         'datetime': datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
@@ -228,16 +232,16 @@ def run_tests():
     task = PatchedTask(cfg['taskname'], cfg['workdir'])
     task.input_file
 
-    logging.info('Entering work dir ' + cfg['workdir'])
+    logging.info('Переходим в рабочий каталог ' + cfg['workdir'])
     os.chdir(cfg['workdir'])
 
     # Проверка на тестах
     results = []
     testmask = pathjoin(cfg['testdir'], '??')
     tests = sorted([basename(fn) for fn in glob.glob(testmask)])
-    logging.info('Found tests ' + ' '.join(tests))
+    logging.info('Найдены тесты: ' + ' '.join(tests))
     
-    suite_key = '.' # na budushee mb budut papki dlya podzadach
+    suite_key = '.' # на будущее мб папки для позадач
     answer['results'][suite_key] = OrderedDict()
     
     first_run_timelimit = 3
@@ -246,12 +250,12 @@ def run_tests():
         test_file = pathjoin(cfg['testdir'], suite_key, test)
         shutil.copy(test_file, task.input_file)
         execution_verdict = execute_one_test(task)
-        logging.info(f'Running test: {test}:') 
+        logging.info(f'Запускаю тест {test}:') 
         if execution_verdict != 'OK':
-            logging.info(f'  Program crashed.') 
+            logging.info(f'  Программа завершилась некорректно') 
             verdict, output = execution_verdict, None
         else:
-            logging.info(f'  Program has completeed, checking file') 
+            logging.info(f'  Программа отработала, запускаю проверку результатов:') 
             shutil.copy(test_file + '.a', ANSWER_FILENAME)
             verdict, output = task.check()
         answer['results'][suite_key][test] = verdict
@@ -259,12 +263,12 @@ def run_tests():
         logging.info(f'  Вердикт: {verdict}')
         if output:
             try:
-                logging.info('  Out: ' + output.decode('cp1251'))
+                logging.info('  Вывод проверки: ' + output.decode('cp1251'))
             except:
-                logging.info('  Out: ' + output)
+                logging.info('  Вывод проверки: ' + output)
 
         if verdict != 'OK':
-            logging.info('Testing stopped.')
+            logging.info('Останавливаю тестирование.')
             raise ArbiterError(verdict)
         task.time_limit, task.timeout = 1.5, 3
     return verdict
@@ -283,16 +287,7 @@ if __name__ == '__main__':
         check_invoker_loads()
         
         logging.info(f'=== Тестирование задачи {cfg["taskname"]} начато ===')
-        if all([word in cfg['workdir'] for word in ('c05str-CrpShepard', 'task1')]):
-            import trace
-            tracer = trace.Trace(
-                ignoredirs=[sys.prefix, sys.exec_prefix],
-                trace=1,
-                count=0)
-            result = None
-            tracer.run('result = run_tests()')
-        else:
-            result = run_tests()
+        result = run_tests() 
     except ArbiterError as e:
         result = e.args[0]
     try:
