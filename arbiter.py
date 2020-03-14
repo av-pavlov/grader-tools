@@ -217,7 +217,6 @@ def execute_one_test(task):
     return answer
 
 def run_tests():
-    """ Проверка решения """
     global cfg
     answer = {
         'datetime': datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
@@ -238,7 +237,7 @@ def run_tests():
     tests = sorted([basename(fn) for fn in glob.glob(testmask)])
     logging.info('Found tests ' + ' '.join(tests))
     
-    suite_key = '.' # на будущее мб папки для позадач
+    suite_key = '.' # na budushee mb budut papki dlya podzadach
     answer['results'][suite_key] = OrderedDict()
     
     first_run_timelimit = 3
@@ -260,12 +259,12 @@ def run_tests():
         logging.info(f'  Вердикт: {verdict}')
         if output:
             try:
-                logging.info('  Вывод проверки: ' + output.decode('cp1251'))
+                logging.info('  Out: ' + output.decode('cp1251'))
             except:
-                logging.info('  Вывод проверки: ' + output)
+                logging.info('  Out: ' + output)
 
         if verdict != 'OK':
-            logging.info('Останавливаю тестирование.')
+            logging.info('Testing stopped.')
             raise ArbiterError(verdict)
         task.time_limit, task.timeout = 1.5, 3
     return verdict
