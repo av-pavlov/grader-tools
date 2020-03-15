@@ -35,7 +35,7 @@ class PatchedTask(Task):
         global cfg
         return cfg['checker']
 
-    def check(self):
+    def check(self, answer_file=ANSWER_FILENAME):
         """ Проверка ответа участника """
         answer = ['FL', '']
         try:
@@ -43,7 +43,7 @@ class PatchedTask(Task):
                 self.checker,
                 self.input_file,
                 self.output_file,
-                ANSWER_FILENAME,
+                answer_file,
             ], stderr=subprocess.STDOUT)
             answer = ['OK', output]
         except subprocess.CalledProcessError as error:
@@ -62,7 +62,7 @@ class PatchedTask(Task):
         return answer
 
 
-def logsetup():
+def setup_logging():
     """ Настройка логирования"""
     global LOG_FILENAME
     try:
@@ -74,7 +74,7 @@ def logsetup():
         print("ERROR setting up loggers:", error.args[0])
         raise ArbiterError('FL')
 
-def argparse():
+def read_arguments():
     """ Установка параметров командной строки """
     try:
         parser = ArgumentParser(description='Арбитр для проверки задач по программированию')
@@ -150,16 +150,46 @@ def check_solution_exists():
         logging.error(msg)
         raise ArbiterError('FL')
     cfg['solution'] = solution
+    logging.debug('НАЙДЕНО РЕШЕНИЕ: ' + cfg['solution'])
+
+def get_known_checkers():
+    exe_mask = '*.exe' if sys.platform == 'win32' else '*'
+    path_mask = pathjoin(cfg['checktoolsdir'], 'checkers', sys.platform, exe_mask)
+    checkers = {os.path.splitext(basename(fn))[0]: abspath(fn) 
+                for fn in glob.glob(path_mask) 
+                if is_executable(fn)}
+    logging.debug(f'НАЙДЕНЫ СТАНДАРТНЫЕ ЧЕКЕРЫ ({path_mask}): ' + 
+                  repr([basename(fn) for fn in checkers]))
+    return checkers
+
+def is_executable(fn):
+    return shutil.which(abspath(fn)) is not None
+
+def is_known_checker_name(fn):
+    global cfg
+    return os.path.splitext(basename(fn))[0] in cfg['known_checkers']
 
 def check_checker_exists():
     """ Проверка наличия файла проверяющей программы """
     global cfg
-    fn = os.path.join(cfg['testdir'], 'check.exe')
-    if not os.path.isfile(fn):
-        logging.error(f'Чекер ({fn}) должен находиться в папке с тестами и называться check.exe')
+    testdir_mask = pathjoin(cfg['testdir'], '*') 
+    candidates = list(map(basename, glob.glob(testdir_mask)))
+    logging.debug('Файлы в папке с тестами: ' + ', '.join(candidates))
+    candidates = [fn for fn in candidates 
+                  if is_known_checker_name(fn) or fn.lower() == 'check.exe']
+    logging.debug(f'Из них годятся в чекеры: {candidates}')
+    if len(candidates) == 1 and isfile(candidates[0]):
+        fn = candidates[0]
+        cfg['checker'] = abspath(pathjoin(cfg['testdir'], fn)) if fn == 'check.exe' \
+                            else cfg['known_checkers'][os.path.splitext(fn)[0]]
+        logging.debug('НАЙДЕН ЧЕКЕР: ' + cfg['checker'])
+    else:
+        logging.error('В папке с тестами должен быть ЛИБО:')
+        logging.error('    1) файл с названием, как у стандартного чекера, ЛИБО ')
+        logging.error('    2) чекер с названием check.exe')
+        logging.error(f'    кандидаты: {candidates}')
         raise ArbiterError('FL')
-    cfg['checker'] = fn
-
+    
 def check_invoker_loads():
     """ Проверка наличия invoker.dll """
     global cfg, invoker
@@ -239,7 +269,7 @@ def run_tests():
     results = []
     testmask = pathjoin(cfg['testdir'], '??')
     tests = sorted([basename(fn) for fn in glob.glob(testmask)])
-    logging.info('Найдены тесты: ' + ' '.join(tests))
+    logging.debug('НАЙДЕНЫ ТЕСТЫ: ' + ' '.join(tests))
     
     suite_key = '.' # на будущее мб папки для позадач
     answer['results'][suite_key] = OrderedDict()
@@ -256,8 +286,7 @@ def run_tests():
             verdict, output = execution_verdict, None
         else:
             logging.info(f'  Программа отработала, запускаю проверку результатов:') 
-            shutil.copy(test_file + '.a', ANSWER_FILENAME)
-            verdict, output = task.check()
+            verdict, output = task.check(answer_file=test_file + '.a')
         answer['results'][suite_key][test] = verdict
         cleanup(task)
         logging.info(f'  Вердикт: {verdict}')
@@ -276,12 +305,13 @@ def run_tests():
 if __name__ == '__main__':
     original_dir = os.getcwd()
     try:
-        logsetup()
-        cfg = argparse()
+        setup_logging()
+        cfg = read_arguments()
         cfg['checktoolsdir'] = os.path.split(abspath(__loader__.path))[0]
         cfg['taskname'] = re.sub('[^A-Za-z0-9_.]', '' , basename(abspath(cfg['workdir'])))
 
         check_dirs()
+        cfg['known_checkers'] = get_known_checkers()
         check_checker_exists()
         check_solution_exists()
         check_invoker_loads()
@@ -291,7 +321,7 @@ if __name__ == '__main__':
     except ArbiterError as e:
         result = e.args[0]
     try:
-        logging.info(f'=== Тестирование задачи {cfg["taskname"]} завершено: {result} ===')
+        logging.info(f'=== Тестирование задачи {cfg["taskname"]} завершено, ВЕРДИКТ: {result} ===')
         open(pathjoin(cfg['resultsdir'], cfg['taskname']+'.res'), 'w').write(result)
         os.chdir(original_dir)
         subprocess.call("type " + LOG_FILENAME, shell=True)        
