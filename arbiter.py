@@ -299,7 +299,7 @@ def run_tests():
         cleanup(task)
         if output:
             try:
-                logging.info('  Вывод проверки: ' + output.decode('cp1251'), end='')
+                logging.info('  Вывод проверки: ' + output.decode('cp1251').rtrim())
             except:
                 logging.info('  Вывод проверки: ' + output, end='')
         logging.info(f'  Вердикт: {verdict}')
