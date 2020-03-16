@@ -180,16 +180,17 @@ def check_checker_exists():
     logging.debug(f'Из них годятся в чекеры: {candidates}')
     if len(candidates) == 1 and isfile(candidates[0]):
         fn = candidates[0]
-        cfg['checker'] = abspath(pathjoin(cfg['testdir'], fn)) if fn == 'check.exe' \
-                            else cfg['known_checkers'][os.path.splitext(fn)[0]]
+        if fn == 'check.exe':
+            src = abspath(pathjoin(cfg['testdir'], fn))
+        else:
+            src = cfg['known_checkers'][os.path.splitext(fn)[0]]
+        shutil.copy(src, cfg['workdir'])
+        cfg['checker'] = abspath(pathjoin(cfg['workdir'], fn))
         logging.debug('НАЙДЕН ЧЕКЕР: ' + cfg['checker'])
         if sys.platform == 'win32':
-            src, dst = f"{cfg['checktoolsdir']}\\checkers\\win32\\msvcr110.dll"  , cfg['workdir']
-            shutil.copy(src, dst)
-            dst = pathjoin(os.getenv('SystemRoot'), 'System32')
-            shutil.copy(src, dst)
-            subprocess.run(f'cmd /c dir {os.getenv("SystemRoot")}\\System32\\msv*')
-            subprocess.run(f'cmd /c PATH')
+            src = f"{cfg['checktoolsdir']}\\checkers\\win32\\msvcr110.dll"  
+            shutil.copy(src, cfg['workdir'])
+            subprocess.run(f'cmd /c dir {cfg["workdir"]}')
     else:
         logging.error('В папке с тестами должен быть ЛИБО:')
         logging.error('    1) файл с названием, как у стандартного чекера, ЛИБО ')
