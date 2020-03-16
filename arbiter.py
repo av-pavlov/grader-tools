@@ -188,8 +188,8 @@ def check_checker_exists():
             shutil.copy(src, dst)
             dst = pathjoin(os.getenv('SystemRoot'), 'System32')
             shutil.copy(src, dst)
-            subproces.run(f'cmd /c dir {os.getenv("SystemRoot")}\\System32\\msv*')
-            subproces.run(f'cmd /c PATH')
+            subprocess.run(f'cmd /c dir {os.getenv("SystemRoot")}\\System32\\msv*')
+            subprocess.run(f'cmd /c PATH')
     else:
         logging.error('В папке с тестами должен быть ЛИБО:')
         logging.error('    1) файл с названием, как у стандартного чекера, ЛИБО ')
