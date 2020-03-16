@@ -188,7 +188,7 @@ def check_checker_exists():
         cfg['checker'] = abspath(pathjoin(cfg['workdir'], fn))
         logging.debug('НАЙДЕН ЧЕКЕР: ' + cfg['checker'])
         if sys.platform == 'win32':
-            for fn in glob.glob(f"{cfg['checktoolsdir']}\\checkers\\win32\\*.dll")  
+            for fn in glob.glob(f"{cfg['checktoolsdir']}\\checkers\\win32\\*.dll"):
                 shutil.copy(src, cfg['workdir'])
     else:
         logging.error('В папке с тестами должен быть ЛИБО:')
