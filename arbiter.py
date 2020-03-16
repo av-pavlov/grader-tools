@@ -183,6 +183,8 @@ def check_checker_exists():
         cfg['checker'] = abspath(pathjoin(cfg['testdir'], fn)) if fn == 'check.exe' \
                             else cfg['known_checkers'][os.path.splitext(fn)[0]]
         logging.debug('НАЙДЕН ЧЕКЕР: ' + cfg['checker'])
+        if sys.platform == 'win32':
+            shutil.copy(f"cfg['checktoolsdir']\\checkers\\win32\\msvcr110.dll"  , cfg['workdir'])
     else:
         logging.error('В папке с тестами должен быть ЛИБО:')
         logging.error('    1) файл с названием, как у стандартного чекера, ЛИБО ')
