@@ -184,7 +184,10 @@ def check_checker_exists():
                             else cfg['known_checkers'][os.path.splitext(fn)[0]]
         logging.debug('НАЙДЕН ЧЕКЕР: ' + cfg['checker'])
         if sys.platform == 'win32':
-            shutil.copy(f"{cfg['checktoolsdir']}\\checkers\\win32\\msvcr110.dll"  , cfg['workdir'])
+            src, dst = f"{cfg['checktoolsdir']}\\checkers\\win32\\msvcr110.dll"  , cfg['workdir']
+            shutil.copy(src, dst)
+            dst = pathjoin(os.getenv('SystemRoot'), 'System32')
+            shutil.copy(src, dst)
     else:
         logging.error('В папке с тестами должен быть ЛИБО:')
         logging.error('    1) файл с названием, как у стандартного чекера, ЛИБО ')
@@ -291,12 +294,12 @@ def run_tests():
             verdict, output = task.check(answer_file=test_file + '.a')
         answer['results'][suite_key][test] = verdict
         cleanup(task)
-        logging.info(f'  Вердикт: {verdict}')
         if output:
             try:
-                logging.info('  Вывод проверки: ' + output.decode('cp1251'))
+                logging.info('  Вывод проверки: ' + output.decode('cp1251'), end='')
             except:
-                logging.info('  Вывод проверки: ' + output)
+                logging.info('  Вывод проверки: ' + output, end='')
+        logging.info(f'  Вердикт: {verdict}')
 
         if verdict != 'OK':
             logging.info('Останавливаю тестирование.')
