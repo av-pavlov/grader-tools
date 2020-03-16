@@ -188,9 +188,8 @@ def check_checker_exists():
         cfg['checker'] = abspath(pathjoin(cfg['workdir'], fn))
         logging.debug('НАЙДЕН ЧЕКЕР: ' + cfg['checker'])
         if sys.platform == 'win32':
-            src = f"{cfg['checktoolsdir']}\\checkers\\win32\\msvcr110.dll"  
-            shutil.copy(src, cfg['workdir'])
-            subprocess.run(f'cmd /c dir {cfg["workdir"]}')
+            for fn in glob.glob(f"{cfg['checktoolsdir']}\\checkers\\win32\\*.dll")  
+                shutil.copy(src, cfg['workdir'])
     else:
         logging.error('В папке с тестами должен быть ЛИБО:')
         logging.error('    1) файл с названием, как у стандартного чекера, ЛИБО ')
