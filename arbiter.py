@@ -287,7 +287,15 @@ def run_tests():
         test_file = pathjoin(cfg['testdir'], suite_key, test)
         shutil.copy(test_file, task.input_file)
         execution_verdict = execute_one_test(task)
-        logging.info(f'Запускаю тест {test}:') 
+        logging.info(f'Запускаю тест {test}:')
+        if execution_verdict == 'TL':
+            print('Got timelimit, run again')
+            for i in range(2):
+                shutil.copy(test_file, task.input_file)
+                execution_verdict = execute_one_test(task)
+                if execution_verdict != 'TL':
+                    break
+                print('Got timelimit')
         if execution_verdict != 'OK':
             logging.info(f'  Программа завершилась некорректно') 
             verdict, output = execution_verdict, None
