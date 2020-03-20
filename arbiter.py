@@ -181,11 +181,12 @@ def check_checker_exists():
     if len(candidates) == 1 and isfile(candidates[0]):
         fn = candidates[0]
         if fn == 'check.exe':
-            src = abspath(pathjoin(cfg['testdir'], fn))
+            dst = abspath(pathjoin(cfg['testdir'], fn))
         else:
             src = cfg['known_checkers'][os.path.splitext(fn)[0]]
-        shutil.copy(src, cfg['workdir'])
-        cfg['checker'] = abspath(pathjoin(cfg['workdir'], fn))
+            dst = pathjoin(cfg['workdir'], basename(src))
+            shutil.copy(src, dst)
+        cfg['checker'] = abspath(dst)
         logging.debug('НАЙДЕН ЧЕКЕР: ' + cfg['checker'])
         if sys.platform == 'win32':
             for fn in glob.glob(f"{cfg['checktoolsdir']}\\checkers\\win32\\*.dll"):
