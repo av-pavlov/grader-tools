@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-""" Проверка задачи на тестах из папки, запись результатов в файл """
+""" Проверка исполняемого файла задачи на тестах из заданной папки """
 
 import os, shutil, sys, time, logging, glob, re, datetime, subprocess, traceback
 from os.path import abspath, basename, split as pathsplit, join as pathjoin, isfile, isdir
@@ -78,13 +78,13 @@ def read_arguments():
     """ Установка параметров командной строки """
     try:
         parser = ArgumentParser(description='Арбитр для проверки задач по программированию')
-        parser.add_argument('-w', '--workdir', default='.', 
+        parser.add_argument('-w', '--workdir', default='.',
                             type=str, help='рабочий каталог, по умолчанию текущий каталог')
-        parser.add_argument('-t', '--testdir', default='test', 
+        parser.add_argument('-t', '--testdir', default='test',
                             type=str, help='каталог с тестами, по умолчанию test в рабочем каталоге')
-        parser.add_argument('-r', '--resultsdir', default='.', 
+        parser.add_argument('-r', '--resultsdir', default='.',
                             type=str, help='каталог для записи результатов, по умолчанию рабочий')
-        parser.add_argument('-s', '--solution', default=DEFAULT_SOLUTION_MASK, 
+        parser.add_argument('-s', '--solution', default=DEFAULT_SOLUTION_MASK,
                             type=str, help='исполняемый файл для тестирования, по умолчанию ищет в Debug в рабочем каталоге')
         return vars(parser.parse_args())
     except Exception as error:
@@ -155,10 +155,10 @@ def check_solution_exists():
 def get_known_checkers():
     exe_mask = '*.exe' if sys.platform == 'win32' else '*'
     path_mask = pathjoin(cfg['checktoolsdir'], 'checkers', sys.platform, exe_mask)
-    checkers = {os.path.splitext(basename(fn))[0]: abspath(fn) 
-                for fn in glob.glob(path_mask) 
+    checkers = {os.path.splitext(basename(fn))[0]: abspath(fn)
+                for fn in glob.glob(path_mask)
                 if is_executable(fn)}
-    logging.debug(f'НАЙДЕНЫ СТАНДАРТНЫЕ ЧЕКЕРЫ ({path_mask}): ' + 
+    logging.debug(f'НАЙДЕНЫ СТАНДАРТНЫЕ ЧЕКЕРЫ ({path_mask}): ' +
                   repr([basename(fn) for fn in checkers]))
     return checkers
 
@@ -172,10 +172,10 @@ def is_known_checker_name(fn):
 def check_checker_exists():
     """ Проверка наличия файла проверяющей программы """
     global cfg
-    testdir_mask = pathjoin(cfg['testdir'], '*') 
+    testdir_mask = pathjoin(cfg['testdir'], '*')
     candidates = list(map(basename, glob.glob(testdir_mask)))
     logging.debug('Файлы в папке с тестами: ' + ', '.join(candidates))
-    candidates = [fn for fn in candidates 
+    candidates = [fn for fn in candidates
                   if is_known_checker_name(fn) or fn.lower() == 'check.exe']
     logging.debug(f'Из них годятся в чекеры: {candidates}')
     if len(candidates) == 1 and isfile(candidates[0]):
@@ -197,7 +197,7 @@ def check_checker_exists():
         logging.error('    2) чекер с названием check.exe')
         logging.error(f'    кандидаты: {candidates}')
         raise ArbiterError('FL')
-    
+
 def check_invoker_loads():
     """ Проверка наличия invoker.dll """
     global cfg, invoker
@@ -231,11 +231,11 @@ def execute_one_test(task):
     global cfg
     answer = 'FL'
 
-    files = [c_char_p(fn.encode('utf-8')) 
+    files = [c_char_p(fn.encode('utf-8'))
              for fn in (cfg['solution'], task.input_file, task.output_file)]
     memory_limit = c_uint(0)
     time_limit = c_uint(int(1000 * task.time_limit))
-        
+
     try:
         invoker.console(*files, byref(memory_limit), byref(time_limit))
 
@@ -266,7 +266,7 @@ def run_tests():
         'compilation': 'FL',
         'results': OrderedDict()
     }
-    
+
     task = PatchedTask(cfg['taskname'], cfg['workdir'])
     task.input_file
 
@@ -278,10 +278,10 @@ def run_tests():
     testmask = pathjoin(cfg['testdir'], '??')
     tests = sorted([basename(fn) for fn in glob.glob(testmask)])
     logging.debug('НАЙДЕНЫ ТЕСТЫ: ' + ' '.join(tests))
-    
+
     suite_key = '.' # на будущее мб папки для позадач
     answer['results'][suite_key] = OrderedDict()
-    
+
     first_run_timelimit = 3
     task.time_limit, task.timeout = first_run_timelimit, 2*first_run_timelimit
     for test in tests:
@@ -297,10 +297,10 @@ def run_tests():
                 if execution_verdict != 'TL':
                     break
         if execution_verdict != 'OK':
-            logging.info(f'  Программа завершилась некорректно') 
+            logging.info(f'  Программа завершилась некорректно')
             verdict, output = execution_verdict, None
         else:
-            logging.info(f'  Программа отработала, запускаю проверку результатов:') 
+            logging.info(f'  Программа отработала, запускаю проверку результатов:')
             verdict, output = task.check(answer_file=test_file + '.a')
         answer['results'][suite_key][test] = verdict
         cleanup(task)
@@ -330,16 +330,16 @@ if __name__ == '__main__':
         check_checker_exists()
         check_solution_exists()
         check_invoker_loads()
-        
+
         logging.info(f'=== Тестирование задачи {cfg["taskname"]} начато ===')
-        result = run_tests() 
+        result = run_tests()
     except ArbiterError as e:
         result = e.args[0]
     try:
         logging.info(f'=== Тестирование задачи {cfg["taskname"]} завершено, ВЕРДИКТ: {result} ===')
         open(pathjoin(cfg['resultsdir'], cfg['taskname']+'.res'), 'w').write(result)
         os.chdir(original_dir)
-        subprocess.call("type " + LOG_FILENAME, shell=True)        
+        subprocess.call("type " + LOG_FILENAME, shell=True)
         sys.exit(0 if result == 'OK' else -2)
     except Exception as e:
         print(e)
